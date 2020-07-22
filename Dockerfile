@@ -1,18 +1,26 @@
-FROM golang:1.6.3
+FROM golang:latest AS builder
 
-ENV STATUSOK_VERSION 0.1.1
+RUN go version
 
-RUN apt-get update \
-    && apt-get install -y unzip \
-    && wget https://github.com/sanathp/statusok/releases/download/$STATUSOK_VERSION/statusok_linux.zip \
-    && unzip statusok_linux.zip \
-    && mv ./statusok_linux/statusok /go/bin/StatusOk \
-    && rm -rf ./statusok_linux* \
-    && apt-get remove -y unzip git \
-    && apt-get autoremove -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+WORKDIR /app
 
-VOLUME /config
+COPY ./ /app
+
+RUN go mod download
+
+RUN go build -o statusok statusok.go
+
+FROM debian:buster-slim
+
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/statusok /
+
+RUN groupadd -g 999 appuser && \
+    useradd -r -u 999 -g appuser appuser
+
+USER 999:999
+
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
+
 ENTRYPOINT /docker-entrypoint.sh
