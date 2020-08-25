@@ -12,7 +12,7 @@ RUN go build -o statusok statusok.go
 
 FROM debian:buster-slim
 
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates dnsutils curl iputils-ping && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/statusok /
 
