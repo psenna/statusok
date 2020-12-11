@@ -247,16 +247,7 @@ func PerformRequest(requestConfig RequestConfig, throttle chan int) error {
 	//Add headers to the request
 	AddHeaders(request, requestConfig.Headers)
 
-	//TODO: put timeout ?
-	/*
-		timeout := 10 * requestConfig.ResponseTime
-
-		client := &http.Client{
-			Timeout: timeout,
-		}
-	*/
-
-	client := &http.Client{}
+	client := getHTTPClient(requestConfig.ResponseTime)
 	start := time.Now()
 
 	getResponse, respErr := client.Do(request)
@@ -366,4 +357,23 @@ func GetJsonParamsBody(params map[string]string) (io.Reader, error) {
 //creates an error when response code from server is not equal to response code mentioned in config file
 func errResposeCode(status int, expectedStatus int) error {
 	return errors.New(fmt.Sprintf("Got Response code %v. Expected Response Code %v ", status, expectedStatus))
+}
+
+func getHTTPClient(requestTime int64) *http.Client {
+	timeout := time.Duration(20*requestTime) * time.Millisecond
+
+	if timeout < time.Duration(5000)*time.Millisecond {
+		timeout = time.Duration(5000) * time.Millisecond
+	}
+
+	tr := &http.Transport{
+		TLSHandshakeTimeout:   timeout,
+		ResponseHeaderTimeout: timeout,
+		ExpectContinueTimeout: timeout,
+	}
+
+	return &http.Client{
+		Transport: tr,
+		Timeout:   timeout,
+	}
 }
